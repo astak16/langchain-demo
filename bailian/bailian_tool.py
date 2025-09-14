@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 from bailian.env import secret
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 
 llm = ChatOpenAI(
@@ -11,11 +11,17 @@ llm = ChatOpenAI(
     streaming=True,
 )
 
-
-prompt_template = PromptTemplate.from_template("今天{something}真不错")
-print(prompt_template)
-prompt = prompt_template.format(something="天气")
-
+chat_prompt_template = ChatPromptTemplate.from_messages(
+    [
+        ("system", "你是一个{role}专家、擅长回答{domain}领域的问题"),
+        ("user", "用户问题：{question}"),
+    ]
+)
+prompt = chat_prompt_template.format_messages(
+    role="编程",
+    domain="web开发",
+    question="如何构建一个 vue 应用",
+)
 
 resp = llm.stream(prompt)
 
