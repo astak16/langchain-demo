@@ -1,20 +1,24 @@
+from pydantic import BaseModel, Field
 from bailian.common import chat_prompt_template, llm
-from langchain_core.tools import Tool
+from langchain_core.tools import tool
 
 
+class AddInputArgs(BaseModel):
+    a: int = Field(description="第一个加数")
+    b: int = Field(description="第二个加数")
+
+
+@tool(
+    description="两个数相加",
+    args_schema=AddInputArgs,
+)
 def add(a, b):
     return a + b
 
 
-add_tools = Tool.from_function(
-    func=add,
-    name="add",
-    description="两个数相加",
-)
-
 tool_dict = {"add": add}
 
-llm_with_tools = llm.bind_tools([add_tools])
+llm_with_tools = llm.bind_tools([add])
 
 chain = chat_prompt_template | llm_with_tools
 
@@ -34,5 +38,5 @@ if tool_calls:
         args = tool_call["args"]
         func_name = tool_call["name"]
         tool_func = tool_dict[func_name]
-        tool_content = tool_func(int(args["__arg1"]), int(args["__arg2"]))
+        tool_content = tool_func.invoke(args)
         print("工具函数计算结果：", tool_content)
