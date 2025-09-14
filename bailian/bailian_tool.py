@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 from bailian.env import secret
-from langchain_core.prompts import ChatPromptTemplate, ChatMessagePromptTemplate
+from langchain_core.prompts import FewShotPromptTemplate, PromptTemplate
 
 
 llm = ChatOpenAI(
@@ -11,27 +11,25 @@ llm = ChatOpenAI(
     streaming=True,
 )
 
-system_message_template = ChatMessagePromptTemplate.from_template(
-    template="你是一个{role}专家、擅长回答{domain}领域的问题", role="system"
+example_template = "输入：{input1}\n输出1: {output}"
+examples = [
+    {"input1": "将 'hello' 翻译成中文", "output": "你好"},
+    {"input1": "将 'goodbye' 翻译成中文", "output": "再见"},
+]
+
+few_shot_prompt_template = FewShotPromptTemplate(
+    examples=examples,
+    example_prompt=PromptTemplate.from_template(example_template),
+    prefix="请将以下英文翻译成中文: ",
+    suffix="输出11：{text}\n",
+    input_variables=["text", "a"],
 )
 
-human_message_template = ChatMessagePromptTemplate.from_template(
-    template="用户问题：{question}", role="user"
-)
+chain = few_shot_prompt_template | llm
+resp = chain.stream(input={"text": "I love programming", "a": "为我翻译"})
 
-chat_prompt_template = ChatPromptTemplate.from_messages(
-    [
-        system_message_template,
-        human_message_template,
-    ]
-)
-prompt = chat_prompt_template.format_messages(
-    role="编程",
-    domain="web开发",
-    question="如何构建一个 vue 应用",
-)
-
-resp = llm.stream(prompt)
+for chunk in resp:
+    print(chunk.content, end="")
 
 
 for chunk in resp:
